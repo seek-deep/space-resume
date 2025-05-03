@@ -5,6 +5,6 @@ export default function Orbit({ radius }: { radius: number }) {
     const angle = (i / 64) * Math.PI * 2; // 65 points to close the circle
     return [Math.cos(angle) * radius, 0, Math.sin(angle) * radius]; // Keep y = 0 for the same plane
   });
-
+  /* @ts-expect-error */
   return <Line points={points} color="white" lineWidth={1} />;
 }

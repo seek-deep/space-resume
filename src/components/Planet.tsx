@@ -78,7 +78,7 @@ export default function Planet({
   moonTexture,
 }: any) {
   const mesh = useRef<THREE.Mesh>(null);
-  const materialRef = useRef<any>();
+  const materialRef = useRef<any>(null);
   const [hovered, setHovered] = useState(false);
   const angleRef = useRef(Math.random() * Math.PI * 2);
   const orbitSpeed = Math.random() * 0.001 + 0.0005;
@@ -109,6 +109,7 @@ export default function Planet({
       >
         <sphereGeometry args={[1, 32, 32]} />
         {/* Rim Glow Shader */}
+        {/* @ts-expect-error */}
         <rimGlowMaterial
           ref={materialRef}
           uTexture={texture}

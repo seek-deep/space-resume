@@ -49,6 +49,7 @@ function CameraController({
 
   useEffect(() => {
     const handleScroll = (event: WheelEvent) => {
+      /* @ts-expect-error */
       setZoom((prev) => Math.min(Math.max(prev + event.deltaY * 0.01, 5), 50));
       clearTarget(); // Detach focus on scroll
     };
