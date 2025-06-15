@@ -1,9 +1,9 @@
+import { Html } from "@react-three/drei";
 import { useRef, useState } from "react";
-import { useFrame, useLoader } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { shaderMaterial } from "@react-three/drei";
 import { extend } from "@react-three/fiber";
-import { TextureLoader } from "three";
 
 const RimGlowMaterial = shaderMaterial(
   {
@@ -46,25 +46,100 @@ const RimGlowMaterial = shaderMaterial(
 
 extend({ RimGlowMaterial });
 
-function Moon({ orbitRadius, planetMesh, texture }: any) {
+interface Moon {
+  name: string;
+  description: string;
+}
+
+type MeshRef = React.RefObject<
+  THREE.Mesh<THREE.BufferGeometry, THREE.Material | THREE.Material[]>
+>;
+
+function MoonObject({
+  orbitRadius,
+  planetMesh,
+  texture,
+  index,
+  totalMoons,
+  moonData,
+  onFocus,
+}: {
+  orbitRadius: number;
+  planetMesh: MeshRef;
+  texture: THREE.Texture;
+  index: number;
+  totalMoons: number;
+  moonData: Moon;
+  onFocus: (
+    mesh: MeshRef,
+    name: string,
+    description?: string,
+    isMoon?: boolean
+  ) => void;
+}) {
   const mesh = useRef<THREE.Mesh>(null);
-  const angleRef = useRef(Math.random() * Math.PI * 2);
+  const angleRef = useRef((Math.PI * 2 * index) / totalMoons);
+  const [hovered, setHovered] = useState(false);
 
   useFrame(() => {
     if (mesh.current && planetMesh.current) {
-      angleRef.current += 0.01; // Moon orbit speed
+      angleRef.current += 0.005;
       const planetPosition = planetMesh.current.position;
+
       const x = planetPosition.x + orbitRadius * Math.cos(angleRef.current);
       const z = planetPosition.z + orbitRadius * Math.sin(angleRef.current);
-      mesh.current.position.set(x, planetPosition.y, z);
+      const y = planetPosition.y + Math.sin(angleRef.current * 2) * 0.3;
+
+      mesh.current.position.set(x, y, z);
+      mesh.current.rotation.y += 0.01;
     }
   });
 
   return (
-    <mesh ref={mesh}>
-      <sphereGeometry args={[0.3, 16, 16]} />
-      <meshStandardMaterial map={texture} />
-    </mesh>
+    <>
+      <mesh
+        ref={mesh}
+        onClick={() =>
+          onFocus(mesh as MeshRef, moonData.name, moonData.description, true)
+        }
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
+      >
+        <sphereGeometry args={[0.3, 16, 16]} />
+        <meshStandardMaterial
+          map={texture}
+          emissive="#ffffff"
+          emissiveIntensity={hovered ? 0.2 : 0}
+        />
+      </mesh>
+
+      {hovered && (
+        <Html
+          position={[
+            mesh.current?.position.x || 0,
+            (mesh.current?.position.y || 0) + 0.5,
+            mesh.current?.position.z || 0,
+          ]}
+          center
+        >
+          <div
+            style={{
+              background: "rgba(0, 0, 0, 0.8)",
+              padding: "8px 12px",
+              borderRadius: "8px",
+              color: "white",
+              fontSize: "14px",
+              pointerEvents: "none",
+              whiteSpace: "nowrap",
+              backdropFilter: "blur(4px)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+          >
+            {moonData.name}
+          </div>
+        </Html>
+      )}
+    </>
   );
 }
 
@@ -76,20 +151,48 @@ export default function Planet({
   texture,
   hasMoons,
   moonTexture,
-}: any) {
+  moons = [],
+}: {
+  position: [number, number, number];
+  name: string;
+  onFocus: (
+    mesh: MeshRef,
+    name: string,
+    description?: string,
+    isMoon?: boolean
+  ) => void;
+  orbitRadius: number;
+  texture: THREE.Texture;
+  hasMoons: boolean;
+  moonTexture: THREE.Texture;
+  moons: Moon[];
+}) {
   const mesh = useRef<THREE.Mesh>(null);
   const materialRef = useRef<any>(null);
   const [hovered, setHovered] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
   const angleRef = useRef(Math.random() * Math.PI * 2);
-  const orbitSpeed = Math.random() * 0.001 + 0.0005;
+
+  // Base orbital period (adjusted for radius)
+  const baseSpeed = 0.001 / Math.sqrt(orbitRadius);
 
   useFrame(() => {
     if (mesh.current) {
+      // Planet rotation
       mesh.current.rotation.y += 0.003;
 
-      angleRef.current += orbitSpeed;
-      const x = orbitRadius * 1.2 * Math.cos(angleRef.current); // Elliptical orbit (x-axis stretched)
-      const z = orbitRadius * Math.sin(angleRef.current);
+      // Update angle for orbital position
+      angleRef.current += baseSpeed;
+
+      // Calculate elliptical orbit position
+      const a = orbitRadius; // semi-major axis
+      const b = orbitRadius * 0.6; // semi-minor axis (matching orbit)
+
+      // Calculate position in the X-Z plane (same as orbit)
+      const x = a * Math.cos(angleRef.current);
+      const z = b * Math.sin(angleRef.current);
+
+      // Update position
       mesh.current.position.set(x, 0, z);
     }
 
@@ -103,12 +206,11 @@ export default function Planet({
       <mesh
         ref={mesh}
         position={position}
-        onClick={() => onFocus(mesh, name)}
+        onClick={() => onFocus(mesh as MeshRef, name)}
         onPointerOver={() => setHovered(true)}
         onPointerOut={() => setHovered(false)}
       >
         <sphereGeometry args={[1, 32, 32]} />
-        {/* Rim Glow Shader */}
         {/* @ts-expect-error */}
         <rimGlowMaterial
           ref={materialRef}
@@ -117,13 +219,103 @@ export default function Planet({
         />
       </mesh>
 
+      {hovered && (
+        <Html
+          position={[
+            mesh.current?.position.x || 0,
+            (mesh.current?.position.y || 0) + 1.5,
+            mesh.current?.position.z || 0,
+          ]}
+          center
+        >
+          <div
+            style={{
+              background: "rgba(0, 0, 0, 0.8)",
+              padding: "8px 12px",
+              borderRadius: "8px",
+              color: "white",
+              fontSize: "14px",
+              pointerEvents: "none",
+              whiteSpace: "nowrap",
+              backdropFilter: "blur(4px)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+          >
+            {name}
+          </div>
+        </Html>
+      )}
+
+      {/* {hasMoons && (
+        <Html
+          position={[
+            mesh.current?.position.x || 0,
+            (mesh.current?.position.y || 0) + 2,
+            mesh.current?.position.z || 0,
+          ]}
+          center
+        >
+          <div
+            style={{
+              background: "rgba(0, 0, 0, 0.8)",
+              padding: "8px 12px",
+              borderRadius: "8px",
+              color: "white",
+              fontSize: "14px",
+              pointerEvents: "auto",
+              whiteSpace: "nowrap",
+              backdropFilter: "blur(4px)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            }}
+          >
+            <button
+              onClick={() => setShowDropdown(!showDropdown)}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "white",
+                cursor: "pointer",
+              }}
+            >
+              {showDropdown ? "Hide Moons" : "Show Moons"}
+            </button>
+
+            {showDropdown && (
+              <ul style={{ marginTop: "8px", padding: "0", listStyle: "none" }}>
+                {moons.map((moon, index) => (
+                  <li key={index}>
+                    <button
+                      onClick={() =>
+                        onFocus(mesh as MeshRef, moon.name, moon.description, true)
+                      }
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        color: "white",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {moon.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Html>
+      )} */}
+
       {hasMoons &&
-        Array.from({ length: 2 }, (_, i) => (
-          <Moon
+        moons.map((moon, i) => (
+          <MoonObject
             key={i}
+            index={i}
+            totalMoons={moons.length}
             orbitRadius={1.5 + i * 0.5}
-            planetMesh={mesh}
+            planetMesh={mesh as MeshRef}
             texture={moonTexture}
+            moonData={moon}
+            onFocus={onFocus}
           />
         ))}
     </>

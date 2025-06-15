@@ -14,9 +14,11 @@
     "@react-three/fiber": "^9.1.2",
     "@react-three/postprocessing": "^3.0.4",
     "@tailwindcss/postcss": "^4.1.4",
+    "framer-motion": "^12.18.1",
     "gsap": "^3.12.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "simplex-noise": "^4.0.3",
     "three": "^0.175.0"
   },
   "devDependencies": {
