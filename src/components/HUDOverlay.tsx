@@ -34,28 +34,36 @@ export default function HUDOverlay({ onNavigate }: any) {
             className="mx-2 px-4 py-2 bg-gray-800 rounded hover:bg-gray-600"
             onClick={() => {
               onNavigate({ name: planet.name, type: "planet" });
-              setExpandedPlanet(expandedPlanet === planet.name ? null : planet.name);
+              setExpandedPlanet(
+                expandedPlanet === planet.name ? null : planet.name
+              );
             }}
           >
             {planet.name}
           </button>
 
-          {expandedPlanet === planet.name && planet.moons && planet.moons.length > 0 && (
-            <div className="absolute top-full left-0 mt-2 w-48 bg-gray-800 rounded shadow-lg">
-              {planet.moons.map((moon) => (
-                <button
-                  key={moon.name}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-600"
-                  onClick={() => {
-                    onNavigate({ name: moon.name, type: "moon", description: moon.description });
-                    setExpandedPlanet(null);
-                  }}
-                >
-                  {moon.name}
-                </button>
-              ))}
-            </div>
-          )}
+          {expandedPlanet === planet.name &&
+            planet.moons &&
+            planet.moons.length > 0 && (
+              <div className="absolute top-full left-0 mt-2 w-48 bg-gray-800 rounded shadow-lg">
+                {planet.moons.map((moon) => (
+                  <button
+                    key={moon.name}
+                    className="block w-full text-left px-4 py-2 hover:bg-gray-600"
+                    onClick={() => {
+                      onNavigate({
+                        name: moon.name,
+                        type: "moon",
+                        description: moon.description,
+                      });
+                      setExpandedPlanet(null);
+                    }}
+                  >
+                    {moon.name}
+                  </button>
+                ))}
+              </div>
+            )}
         </div>
       ))}
     </div>

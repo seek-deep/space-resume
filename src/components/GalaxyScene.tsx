@@ -110,19 +110,32 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
   useEffect(() => {
     if (selectedItem) {
       // Find the corresponding orbit data
-      const planet = orbits.find(orbit => 
-        orbit.name === selectedItem.name || 
-        orbit.moons?.some(moon => moon.name === selectedItem.name)
+      const planet = orbits.find(
+        (orbit) =>
+          orbit.name === selectedItem.name ||
+          orbit.moons?.some((moon) => moon.name === selectedItem.name)
       );
 
       if (planet) {
         if (selectedItem.type === "planet") {
-          handleFocus({ current: { position: new THREE.Vector3(planet.radius, 0, 0) } } as any, selectedItem.name);
+          handleFocus(
+            {
+              current: { position: new THREE.Vector3(planet.radius, 0, 0) },
+            } as any,
+            selectedItem.name
+          );
         } else {
           // Handle moon selection
-          const moon = planet.moons?.find(m => m.name === selectedItem.name);
+          const moon = planet.moons?.find((m) => m.name === selectedItem.name);
           if (moon) {
-            handleFocus({ current: { position: new THREE.Vector3(planet.radius, 0, 0) } } as any, moon.name, moon.description, true);
+            handleFocus(
+              {
+                current: { position: new THREE.Vector3(planet.radius, 0, 0) },
+              } as any,
+              moon.name,
+              moon.description,
+              true
+            );
           }
         }
       }
@@ -132,14 +145,16 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
   const clearTarget = () => setTarget(null);
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100vw",
-      height: "100vh",
-      overflow: "hidden",
-    }}>
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100vw",
+        height: "100vh",
+        overflow: "hidden",
+      }}
+    >
       <InfoModal
         isOpen={modalContent.isOpen}
         onClose={() => setModalContent((prev) => ({ ...prev, isOpen: false }))}
@@ -148,17 +163,40 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
         type={modalContent.type}
       />
 
-      <Canvas camera={{ position: [0, 25, zoom], fov: 60 }} style={{ width: "100%", height: "100%" }}>
+      <Canvas
+        camera={{ position: [0, 25, zoom], fov: 60 }}
+        style={{ width: "100%", height: "100%" }}
+      >
         <ambientLight intensity={0.5} />
         <pointLight position={[0, 0, 0]} intensity={1.5} />
-        <spotLight position={[0, 10, 0]} angle={0.5} penumbra={1} intensity={2} color="#ffffff" />
-        <pointLight position={[26, 0, 26]} intensity={1} distance={50} decay={2} />
+        <spotLight
+          position={[0, 10, 0]}
+          angle={0.5}
+          penumbra={1}
+          intensity={2}
+          color="#ffffff"
+        />
+        <pointLight
+          position={[26, 0, 26]}
+          intensity={1}
+          distance={50}
+          decay={2}
+        />
 
         <mesh>
           <sphereGeometry args={[500, 64, 64]} />
-          <meshBasicMaterial map={textures.galaxyBackground} side={THREE.BackSide} />
+          <meshBasicMaterial
+            map={textures.galaxyBackground}
+            side={THREE.BackSide}
+          />
         </mesh>
-        <Stars radius={200} depth={60} count={10000} factor={7} saturation={0} />
+        <Stars
+          radius={200}
+          depth={60}
+          count={10000}
+          factor={7}
+          saturation={0}
+        />
 
         <OrbitControls
           enableZoom={true}
@@ -167,7 +205,12 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
           maxPolarAngle={Math.PI / 1.5}
           minPolarAngle={Math.PI / 6}
         />
-        <CameraController target={target} zoom={zoom} setZoom={setZoom} clearTarget={clearTarget} />
+        <CameraController
+          target={target}
+          zoom={zoom}
+          setZoom={setZoom}
+          clearTarget={clearTarget}
+        />
 
         <Suspense fallback={null}>
           <AssistantAvatar />
