@@ -1,57 +1,62 @@
 import { useState } from "react";
 import GalaxyScene from "./components/GalaxyScene";
 import HUDOverlay from "./components/HUDOverlay";
-import DetailDrawer from "./components/DetailDrawer"; // Import DetailDrawer
-import { OrbitData } from "./constants"; // Import OrbitData type for planet data
+import MoonDetailDrawer from "./components/MoonDetailDrawer"; // Import MoonDetailDrawer
+import { OrbitData, Moon } from "./constants"; // Import types
 import "./index.css";
 
-// For camera focus, if needed separately
-interface CameraFocusItem {
-  name: string;
+// For camera focus target in GalaxyScene
+interface CameraFocusTarget {
+  name: string; // Name of the moon or planet
   type: "planet" | "moon";
+  planetName?: string; // Name of the parent planet if type is 'moon'
 }
 
 function App() {
-  // State for the Detail Drawer (left-side on desktop, bottom-sheet on mobile)
-  const [isDetailDrawerOpen, setIsDetailDrawerOpen] = useState(false);
-  const [selectedPlanetData, setSelectedPlanetData] = useState<OrbitData | null>(null);
+  const [isMoonDetailDrawerOpen, setIsMoonDetailDrawerOpen] = useState(false);
+  const [selectedMoonData, setSelectedMoonData] = useState<Moon | null>(null);
+  // Store the parent planet of the selected moon for context (e.g., camera positioning)
+  const [currentPlanetForMoon, setCurrentPlanetForMoon] = useState<OrbitData | null>(null);
 
-  // State for camera focus target (optional, can be tied to selectedPlanetData)
-  const [cameraFocusTarget, setCameraFocusTarget] = useState<CameraFocusItem | null>(null);
+  const [cameraFocusTarget, setCameraFocusTarget] = useState<CameraFocusTarget | null>(null);
 
-  // Define the navbar height class to be passed down
-  // This should match the class used in HUDOverlay.tsx and for DetailDrawer calculations
-  const navBarHeightClass = "h-16"; // Corresponds to 4rem or 64px
+  // Consistent navbar height class, passed to drawers that need to offset by it
+  const navBarHeightClass = "h-16";
 
-  // Called by HUDOverlay when a planet is selected
-  const handlePlanetSelection = (planetData: OrbitData) => {
-    setSelectedPlanetData(planetData);
-    setIsDetailDrawerOpen(true);
-    // Optionally, set camera focus when a planet is selected for the drawer
-    setCameraFocusTarget({ name: planetData.name, type: "planet" });
+  // Called by HUDOverlay when a moon is selected from a dropdown (desktop) or accordion (mobile)
+  const handleMoonSelection = (moonData: Moon, planetData: OrbitData) => {
+    setSelectedMoonData(moonData);
+    setCurrentPlanetForMoon(planetData); // Store parent planet context
+    setIsMoonDetailDrawerOpen(true);
+
+    // Set camera focus target to the selected moon
+    // GalaxyScene will need logic to handle focusing on a moon, potentially using planetData for context
+    setCameraFocusTarget({ name: moonData.name, type: "moon", planetName: planetData.name });
   };
 
-  const handleCloseDetailDrawer = () => {
-    setIsDetailDrawerOpen(false);
-    // Consider adding a small delay before resetting selectedPlanetData to allow exit animation
+  const handleCloseMoonDetailDrawer = () => {
+    setIsMoonDetailDrawerOpen(false);
+    // Delay clearing data to allow for exit animations
     setTimeout(() => {
-      setSelectedPlanetData(null);
-    }, 300); // Adjust delay to match animation duration
+      setSelectedMoonData(null);
+      setCurrentPlanetForMoon(null);
+    }, 300); // Match animation duration (approx)
   };
 
   return (
     <div className="!w-screen !h-screen bg-black overflow-hidden m-0">
       <HUDOverlay
-        onPlanetSelect={handlePlanetSelection}
+        onMoonSelect={handleMoonSelection}
       />
       <GalaxyScene
         selectedItem={cameraFocusTarget}
       />
-      <DetailDrawer
-        isOpen={isDetailDrawerOpen}
-        onClose={handleCloseDetailDrawer}
-        planetData={selectedPlanetData}
+      <MoonDetailDrawer
+        isOpen={isMoonDetailDrawerOpen}
+        onClose={handleCloseMoonDetailDrawer}
+        moonData={selectedMoonData}
         navBarHeightClass={navBarHeightClass}
+        // planetForContext={currentPlanetForMoon} // Could pass planet if drawer needs more than just moonData
       />
     </div>
   );
