@@ -93,14 +93,14 @@ export default function HUDOverlay({ onMoonSelect }: HUDOverlayProps) {
     hidden: { x: "-100%" },
     visible: {
       x: 0,
-      transition: { type: "spring", damping: 28, stiffness: 220 },
+      transition: { type: "spring" as const, damping: 28, stiffness: 220 },
     },
-    exit: { x: "-100%", transition: { duration: 0.3, ease: "easeInOut" } },
+    exit: { x: "-100%", transition: { duration: 0.3, ease: [0.42, 0, 0.58, 1] as const } },
   };
 
   const mobileAccordionContentVariants = {
     collapsed: { height: 0, opacity: 0, marginTop: 0 },
-    open: { height: "auto", opacity: 1, marginTop: "0.25rem" }, // Adjusted margin
+    open: { height: "auto", opacity: 1, marginTop: "0.25rem" },
   };
 
   const dropdownMenuVariants = {
@@ -109,13 +109,13 @@ export default function HUDOverlay({ onMoonSelect }: HUDOverlayProps) {
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: { duration: 0.12, ease: "easeOut" },
+      transition: { duration: 0.12, ease: [0.42, 0, 0.58, 1] as const },
     },
     exit: {
       opacity: 0,
       y: -5,
       scale: 0.98,
-      transition: { duration: 0.1, ease: "easeIn" },
+      transition: { duration: 0.1, ease: [0.42, 0, 0.58, 1] as const },
     },
   };
 
@@ -129,7 +129,9 @@ export default function HUDOverlay({ onMoonSelect }: HUDOverlayProps) {
           <div
             key={planet.name}
             className="relative"
-            ref={(el) => (dropdownContainerRefs.current[planet.name] = el)}
+            ref={(el) => {
+              dropdownContainerRefs.current[planet.name] = el;
+            }}
           >
             <button
               onClick={() => toggleDropdown(planet.name)}

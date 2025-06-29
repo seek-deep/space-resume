@@ -36,7 +36,7 @@ const MoonDetailDrawer: React.FC<MoonDetailDrawerProps> = ({
     exit: { y: "100%", opacity: 0 },
   };
 
-  const drawerTransition = { type: "spring", damping: 28, stiffness: 220 };
+  const drawerTransition = { type: "spring" as const, damping: 28, stiffness: 220 };
 
   return (
     <AnimatePresence>

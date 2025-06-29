@@ -42,7 +42,7 @@ function CameraController({
 
   useEffect(() => {
     const handleScroll = (event: WheelEvent) => {
-      setZoom((prev) => Math.min(Math.max(prev + event.deltaY * 0.01, 5), 50)); // Adjusted scroll sensitivity/limits
+      setZoom(Math.min(Math.max(zoom + event.deltaY * 0.01, 5), 50)); // Use zoom directly
       clearTarget(); // Clear target on manual scroll to allow free exploration
     };
 
@@ -57,7 +57,7 @@ function CameraController({
       window.removeEventListener("wheel", handleScroll);
       window.removeEventListener("mousedown", handleMouseDown);
     };
-  }, [setZoom, clearTarget]);
+  }, [setZoom, clearTarget, zoom]);
 
   return null;
 }
