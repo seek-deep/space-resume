@@ -1,14 +1,14 @@
 // GalaxyScene.jsx
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Stars } from "@react-three/drei";
-import InfoModal from "./InfoModal";
+// InfoModal is no longer used here, App.tsx handles MoonDetailDrawer
 import { useState, useEffect, Suspense } from "react";
 import Planet from "./Planet";
 import Orbit from "./Orbit";
 import AsteroidBelt from "./AsteroidBelt";
 import AssistantAvatar from "./AssistantAvatar";
 import * as THREE from "three";
-import { orbits, textures } from "../constants";
+import { orbits, textures, OrbitData as PlanetOrbitData } from "../constants"; // Renamed OrbitData to avoid conflict
 
 // Only keep the CameraController component and UI components, remove orbit data
 function CameraController({
@@ -27,9 +27,13 @@ function CameraController({
   useFrame(() => {
     if (target) {
       const [x, y, z] = target.position;
-      const cameraX = x + zoom;
-      const cameraY = y + 2;
-      const cameraZ = z;
+      // Camera positioning logic: Adjust as needed for better framing of planets/moons
+      const distanceFactor = target.name.includes("Moon Focus")
+        ? zoom * 0.75
+        : zoom; // Zoom closer for moons
+      const cameraX = x + distanceFactor; // Example: offset by zoom level
+      const cameraY = y + distanceFactor * 0.2; // Slightly elevated view
+      const cameraZ = z + distanceFactor * 0.3; // Angled view
 
       camera.position.lerp(new THREE.Vector3(cameraX, cameraY, cameraZ), 0.05);
       camera.lookAt(new THREE.Vector3(x, y, z));
@@ -38,13 +42,12 @@ function CameraController({
 
   useEffect(() => {
     const handleScroll = (event: WheelEvent) => {
-      /* @ts-expect-error */
-      setZoom((prev) => Math.min(Math.max(prev + event.deltaY * 0.01, 5), 50));
-      clearTarget();
+      setZoom(Math.min(Math.max(zoom + event.deltaY * 0.01, 5), 50)); // Use zoom directly
+      clearTarget(); // Clear target on manual scroll to allow free exploration
     };
 
     const handleMouseDown = () => {
-      clearTarget();
+      clearTarget(); // Clear target on mouse down to allow free exploration
     };
 
     window.addEventListener("wheel", handleScroll);
@@ -54,91 +57,90 @@ function CameraController({
       window.removeEventListener("wheel", handleScroll);
       window.removeEventListener("mousedown", handleMouseDown);
     };
-  }, [setZoom, clearTarget]);
+  }, [setZoom, clearTarget, zoom]);
 
   return null;
 }
 
-interface NavigationItem {
-  name: string;
+// This is the type received from App.tsx
+interface CameraFocusTarget {
+  name: string; // Name of the moon or planet
   type: "planet" | "moon";
-  description?: string;
+  planetName?: string; // Name of the parent planet if type is 'moon'
 }
 
 interface GalaxySceneProps {
-  selectedItem: NavigationItem | null;
+  selectedItem: CameraFocusTarget | null;
+  onMoonSelect?: (
+    moon: { name: string; description: string },
+    planet: PlanetOrbitData
+  ) => void;
 }
 
-export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
+export default function GalaxyScene({
+  selectedItem,
+  onMoonSelect,
+}: GalaxySceneProps) {
   const [target, setTarget] = useState<{
     position: [number, number, number];
     name: string;
-    description?: string;
   } | null>(null);
-  const [zoom, setZoom] = useState(25);
-  const [modalContent, setModalContent] = useState<{
-    isOpen: boolean;
-    title: string;
-    content: React.ReactNode;
-    type: "planet" | "moon";
-  }>({
-    isOpen: false,
-    title: "",
-    content: null,
-    type: "planet",
-  });
+  const [zoom, setZoom] = useState(30); // Initial zoom level
 
-  const handleFocus = (
-    planetMesh: React.RefObject<THREE.Mesh>,
+  // This handleFocus is for direct 3D scene interaction (clicking on a moon mesh)
+  // It's separate from HUD-driven navigation. We might remove it if not needed.
+  const handleFocusOnSceneObject = (
+    meshRef: React.RefObject<THREE.Mesh>,
     name: string,
     description?: string,
-    isMoon: boolean = false
+    isMoon?: boolean
   ) => {
-    if (planetMesh.current) {
-      const { x, y, z } = planetMesh.current.position;
-      setTarget({ position: [x, y, z], name, description });
-
-      setModalContent({
-        isOpen: true,
-        title: name,
-        content: description || "",
-        type: isMoon ? "moon" : "planet",
-      });
+    if (meshRef.current) {
+      const { x, y, z } = meshRef.current.position;
+      console.log(`Focusing on ${name} at position:`, { x, y, z });
+      setTarget({ position: [x, y, z], name: `${name} (3D Click)` });
+      if (isMoon && description && onMoonSelect) {
+        // Find the planet for this moon
+        const planet = orbits.find(
+          (p) => p.moons && p.moons.some((m) => m.name === name)
+        );
+        if (planet) {
+          onMoonSelect({ name, description }, planet);
+        }
+      }
     }
   };
 
   useEffect(() => {
     if (selectedItem) {
-      // Find the corresponding orbit data
-      const planet = orbits.find(
-        (orbit) =>
-          orbit.name === selectedItem.name ||
-          orbit.moons?.some((moon) => moon.name === selectedItem.name)
-      );
+      let planetToFocus: PlanetOrbitData | undefined;
+      let targetName = selectedItem.name;
+      let newZoom = 20; // Default zoom for planets
 
-      if (planet) {
-        if (selectedItem.type === "planet") {
-          handleFocus(
-            {
-              current: { position: new THREE.Vector3(planet.radius, 0, 0) },
-            } as any,
-            selectedItem.name
-          );
-        } else {
-          // Handle moon selection
-          const moon = planet.moons?.find((m) => m.name === selectedItem.name);
-          if (moon) {
-            handleFocus(
-              {
-                current: { position: new THREE.Vector3(planet.radius, 0, 0) },
-              } as any,
-              moon.name,
-              moon.description,
-              true
-            );
-          }
-        }
+      if (selectedItem.type === "moon" && selectedItem.planetName) {
+        planetToFocus = orbits.find(
+          (p) => p.name === selectedItem.planetName && !p.isAsteroidBelt
+        );
+        targetName = `${selectedItem.planetName} - ${selectedItem.name} (Moon Focus)`; // For CameraController differentiation
+        newZoom = 15; // Zoom closer for moons
+      } else if (selectedItem.type === "planet") {
+        planetToFocus = orbits.find(
+          (p) => p.name === selectedItem.name && !p.isAsteroidBelt
+        );
+        newZoom = 20;
       }
+
+      if (planetToFocus) {
+        // For simplicity, target the planet's main orbital position.
+        // Planet.tsx handles its own animation along an orbit, so mesh.position is dynamic.
+        // We use the defining radius of the orbit as the primary component of the target.
+        setTarget({ position: [planetToFocus.radius, 0, 0], name: targetName });
+        setZoom(newZoom);
+      } else {
+        setTarget(null); // Clear target if no valid item found
+      }
+    } else {
+      setTarget(null); // Clear target if selectedItem is null
     }
   }, [selectedItem]);
 
@@ -155,16 +157,9 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
         overflow: "hidden",
       }}
     >
-      <InfoModal
-        isOpen={modalContent.isOpen}
-        onClose={() => setModalContent((prev) => ({ ...prev, isOpen: false }))}
-        title={modalContent.title}
-        content={modalContent.content}
-        type={modalContent.type}
-      />
-
+      {/* InfoModal is removed as MoonDetailDrawer in App.tsx handles this */}
       <Canvas
-        camera={{ position: [0, 25, zoom], fov: 60 }}
+        camera={{ position: [0, zoom, zoom], fov: 75 }} // Adjusted initial camera pos and fov
         style={{ width: "100%", height: "100%" }}
       >
         <ambientLight intensity={0.5} />
@@ -231,7 +226,7 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
                 <Planet
                   position={[orbitData.radius, 0, 0]}
                   name={orbitData.name}
-                  onFocus={handleFocus}
+                  onFocus={handleFocusOnSceneObject}
                   orbitRadius={orbitData.radius}
                   texture={orbitData.texture || textures.sun}
                   hasMoons={!!orbitData.moons?.length}

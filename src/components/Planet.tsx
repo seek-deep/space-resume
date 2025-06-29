@@ -206,7 +206,7 @@ export default function Planet({
       <mesh
         ref={mesh}
         position={position}
-        onClick={() => onFocus(mesh as MeshRef, name)}
+        // onClick={() => onFocus(mesh as MeshRef, name)} // Removed onClick for planets
         onPointerOver={() => setHovered(true)}
         onPointerOut={() => setHovered(false)}
       >
@@ -223,25 +223,35 @@ export default function Planet({
         <Html
           position={[
             mesh.current?.position.x || 0,
-            (mesh.current?.position.y || 0) + 1.5,
+            (mesh.current?.position.y || 0) + 1.5, // Positioned above the planet
             mesh.current?.position.z || 0,
           ]}
           center
+          style={{
+            width: "250px", // Give it a bit more width for the new text
+            textAlign: "center",
+          }}
         >
           <div
             style={{
               background: "rgba(0, 0, 0, 0.8)",
-              padding: "8px 12px",
-              borderRadius: "8px",
+              padding: "10px 15px", // Slightly more padding
+              borderRadius: "10px", // Slightly more rounded
               color: "white",
               fontSize: "14px",
               pointerEvents: "none",
-              whiteSpace: "nowrap",
-              backdropFilter: "blur(4px)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
+              // whiteSpace: "nowrap", // Remove nowrap to allow text to wrap
+              backdropFilter: "blur(5px)", // Slightly more blur
+              border: "1px solid rgba(255, 255, 255, 0.15)", // Slightly more visible border
             }}
           >
-            {name}
+            <div style={{ fontWeight: "bold", marginBottom: "5px" }}>
+              This is {name}
+            </div>
+            <div style={{ fontSize: "13px" }}>
+              🛰️ Click on one of this planet’s moons to explore individual
+              experiences/projects.
+            </div>
           </div>
         </Html>
       )}
