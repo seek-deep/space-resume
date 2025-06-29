@@ -28,7 +28,9 @@ function CameraController({
     if (target) {
       const [x, y, z] = target.position;
       // Camera positioning logic: Adjust as needed for better framing of planets/moons
-      const distanceFactor = target.name.includes("Moon Focus") ? zoom * 0.75 : zoom; // Zoom closer for moons
+      const distanceFactor = target.name.includes("Moon Focus")
+        ? zoom * 0.75
+        : zoom; // Zoom closer for moons
       const cameraX = x + distanceFactor; // Example: offset by zoom level
       const cameraY = y + distanceFactor * 0.2; // Slightly elevated view
       const cameraZ = z + distanceFactor * 0.3; // Angled view
@@ -69,9 +71,16 @@ interface CameraFocusTarget {
 
 interface GalaxySceneProps {
   selectedItem: CameraFocusTarget | null;
+  onMoonSelect?: (
+    moon: { name: string; description: string },
+    planet: PlanetOrbitData
+  ) => void;
 }
 
-export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
+export default function GalaxyScene({
+  selectedItem,
+  onMoonSelect,
+}: GalaxySceneProps) {
   const [target, setTarget] = useState<{
     position: [number, number, number];
     name: string;
@@ -83,14 +92,22 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
   const handleFocusOnSceneObject = (
     meshRef: React.RefObject<THREE.Mesh>,
     name: string,
-    // description?: string, // Description not used here anymore
-    // isMoon: boolean = false // Type is determined by what's clicked
+    description?: string,
+    isMoon?: boolean
   ) => {
     if (meshRef.current) {
       const { x, y, z } = meshRef.current.position;
-      // This will set camera target for 3D clicks, but won't open drawers.
-      // Drawers are handled by App.tsx via HUD interaction.
+      console.log(`Focusing on ${name} at position:`, { x, y, z });
       setTarget({ position: [x, y, z], name: `${name} (3D Click)` });
+      if (isMoon && description && onMoonSelect) {
+        // Find the planet for this moon
+        const planet = orbits.find(
+          (p) => p.moons && p.moons.some((m) => m.name === name)
+        );
+        if (planet) {
+          onMoonSelect({ name, description }, planet);
+        }
+      }
     }
   };
 
@@ -101,11 +118,15 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
       let newZoom = 20; // Default zoom for planets
 
       if (selectedItem.type === "moon" && selectedItem.planetName) {
-        planetToFocus = orbits.find(p => p.name === selectedItem.planetName && !p.isAsteroidBelt);
+        planetToFocus = orbits.find(
+          (p) => p.name === selectedItem.planetName && !p.isAsteroidBelt
+        );
         targetName = `${selectedItem.planetName} - ${selectedItem.name} (Moon Focus)`; // For CameraController differentiation
         newZoom = 15; // Zoom closer for moons
       } else if (selectedItem.type === "planet") {
-        planetToFocus = orbits.find(p => p.name === selectedItem.name && !p.isAsteroidBelt);
+        planetToFocus = orbits.find(
+          (p) => p.name === selectedItem.name && !p.isAsteroidBelt
+        );
         newZoom = 20;
       }
 
@@ -205,7 +226,7 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
                 <Planet
                   position={[orbitData.radius, 0, 0]}
                   name={orbitData.name}
-                  onFocus={handleFocus}
+                  onFocus={handleFocusOnSceneObject}
                   orbitRadius={orbitData.radius}
                   texture={orbitData.texture || textures.sun}
                   hasMoons={!!orbitData.moons?.length}
