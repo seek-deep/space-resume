@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu as MenuIcon, X as XIcon, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react"; // MenuIcon and XIcon removed
 import { orbits, OrbitData, Moon } from "../constants";
+import "./BurgerMenu.css"; // Import custom burger menu styles
 
 interface HUDOverlayProps {
   onMoonSelect: (moonData: Moon, planetData: OrbitData) => void;
@@ -122,7 +123,7 @@ export default function HUDOverlay({ onMoonSelect }: HUDOverlayProps) {
     <>
       {/* Desktop Navigation Bar with Dropdowns */}
       <nav
-        className={`fixed top-0 left-0 w-full ${navBarHeightClass} bg-gray-800/90 backdrop-blur-lg text-white z-30 hidden md:flex justify-between items-center space-x-2.5 px-6 shadow-lg `}
+        className={`fixed top-0 left-0 right-0 w-full ${navBarHeightClass} bg-[rgba(0,0,0,0.4)] backdrop-blur-md border-b border-white/10 text-white z-30 hidden md:flex justify-center items-center gap-x-6 px-6 shadow-md`}
       >
         {navPlanets.map((planet) => (
           <div
@@ -167,31 +168,31 @@ export default function HUDOverlay({ onMoonSelect }: HUDOverlayProps) {
         ))}
       </nav>
 
-      {/* Mobile Top Bar (Title & Hamburger using Lucide Icons) */}
+      {/* Mobile Top Bar (Title & Custom SVG Hamburger) */}
       <div
-        className={`fixed top-0 left-0 w-full ${navBarHeightClass}  text-white z-30 flex md:hidden justify-between items-center px-4 shadow-lg`}
+        className={`fixed top-0 left-0 w-full ${navBarHeightClass} text-white z-30 flex md:hidden items-center px-4 shadow-lg`} // Removed justify-between as the burger is the main item here now
       >
         <button
           onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
-          className="p-2 rounded-md hover:bg-gray-700/50 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors z-40"
-          aria-label="Toggle menu"
+          className={`menu ${
+            isMobileNavOpen ? "opened" : ""
+          } rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400 z-40`} // Removed p-2, menu class handles padding. Kept focus/rounded.
+          aria-label="Main Menu"
+          aria-expanded={isMobileNavOpen}
         >
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={isMobileNavOpen ? "x" : "menu"}
-              initial={{ rotate: -45, opacity: 0 }}
-              animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: 45, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-            >
-              {isMobileNavOpen ? (
-                <XIcon size={28} strokeWidth={2.5} />
-              ) : (
-                <MenuIcon size={28} strokeWidth={2.5} />
-              )}
-            </motion.div>
-          </AnimatePresence>
+          <svg width="30" height="30" viewBox="0 0 100 100"> {/* Adjusted size for practical use */}
+            <path
+              className="line line1"
+              d="M 20,29.000046 H 80.000231 C 80.000231,29.000046 94.498839,28.817352 94.532987,66.711331 94.543142,77.980673 90.966081,81.670246 85.239173,81.668997 C 79.512265,81.667751 75.000211,74.999942 75.000211,74.999942 L 25.000021,25.000058"
+            />
+            <path className="line line2" d="M 20,50 H 80" />
+            <path
+              className="line line3"
+              d="M 20,70.999954 H 80.000231 C 80.000231,70.999954 94.498839,71.182648 94.532987,33.288669 C 94.543142,22.019327 90.966081,18.329754 85.239173,18.331003 C 79.512265,18.332249 75.000211,25.000058 75.000211,25.000058 L 25.000021,74.999942"
+            />
+          </svg>
         </button>
+        {/* Optionally, add a title here if needed, e.g., <h1 className="text-xl ml-4">Title</h1> */}
       </div>
 
       {/* Mobile Left-Side Navigation Drawer with Accordions */}
