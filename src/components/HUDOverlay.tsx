@@ -1,44 +1,15 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion"; // Import motion and AnimatePresence
-import { orbits, OrbitData } from "../constants"; // Import OrbitData type
+import { motion, AnimatePresence } from "framer-motion";
+import { orbits, OrbitData } from "../constants";
 
 interface HUDOverlayProps {
-  onNavigateToPlanet: (planetName: string) => void;
-  onFocusCamera: (item: { name: string; type: "planet" | "moon" }) => void; // Kept if direct camera focus is needed
+  onPlanetSelect: (planetData: OrbitData) => void;
+  // onCameraFocus: (item: { name: string; type: "planet" | "moon" }) => void; // Retain if camera focus is still a separate concern
 }
 
-export default function HUDOverlay({ onNavigateToPlanet, onFocusCamera }: HUDOverlayProps) {
+export default function HUDOverlay({ onPlanetSelect }: HUDOverlayProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const mobileMenuVariants = {
-    hidden: { opacity: 0, scale: 0.95 },
-    visible: { opacity: 1, scale: 1 },
-    exit: { opacity: 0, scale: 0.95 },
-  };
-
-  const mobileMenuItemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: {
-        delay: i * 0.05,
-        type: "spring",
-        stiffness: 300,
-        damping: 20,
-      },
-    }),
-    exit: (i: number) => ({
-      opacity: 0,
-      y: -20,
-      transition: {
-        delay: i * 0.03,
-        ease: "easeInOut"
-      }
-    })
-  };
-
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const audio = new Audio(
@@ -48,9 +19,7 @@ export default function HUDOverlay({ onNavigateToPlanet, onFocusCamera }: HUDOve
     audioRef.current = audio;
 
     const playAudio = () => {
-      audio.play().catch((err) => {
-        console.error("Audio playback failed:", err);
-      });
+      audio.play().catch((err) => console.error("Audio playback failed:", err));
       window.removeEventListener("click", playAudio);
     };
 
@@ -63,47 +32,71 @@ export default function HUDOverlay({ onNavigateToPlanet, onFocusCamera }: HUDOve
     };
   }, []);
 
-  const navItems = orbits.filter(
-    (item: OrbitData) => !item.isAsteroidBelt
-  );
+  const navItems = orbits.filter((item) => !item.isAsteroidBelt);
 
-  const handlePlanetClick = (planetName: string) => {
-    onNavigateToPlanet(planetName); // This will open the drawer via App.tsx
-    setIsMobileMenuOpen(false); // Close mobile menu on navigation
+  const handleDesktopPlanetClick = (planet: OrbitData) => {
+    onPlanetSelect(planet);
   };
+
+  const handleMobilePlanetClick = (planet: OrbitData) => {
+    setIsMobileNavOpen(false); // Close mobile nav drawer first
+    onPlanetSelect(planet); // Then trigger action in App.tsx (which will open bottom sheet)
+  };
+
+  const mobileNavVariants = {
+    hidden: { x: "-100%" },
+    visible: { x: 0 },
+    exit: { x: "-100%" },
+  };
+
+  const mobileNavItemVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      x: 0,
+      transition: { delay: i * 0.05 + 0.2, type: "spring", stiffness: 120 },
+    }),
+    exit: { opacity: 0, x: -20, transition: { duration: 0.15 } },
+  };
+
+  const navBarHeight = "h-16"; // Standard height for the navbar, e.g., 4rem or 64px
 
   return (
     <>
-      {/* Desktop Navigation */}
-      <nav className="fixed top-0 left-0 w-full bg-black/70 backdrop-blur-md p-4 text-white z-20 hidden md:flex justify-center items-center space-x-2">
+      {/* Desktop Navigation Bar */}
+      <nav
+        className={`fixed top-0 left-0 w-full ${navBarHeight} bg-black/70 backdrop-blur-md text-white z-30 hidden md:flex justify-center items-center space-x-3 px-6 shadow-lg`}
+      >
         {navItems.map((planet) => (
           <button
             key={planet.name}
-            className="px-5 py-2.5 text-sm font-medium bg-gray-800/70 rounded-lg hover:bg-blue-600/80 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 transition-all duration-200 ease-in-out transform hover:scale-105"
-            onClick={() => handlePlanetClick(planet.name)}
+            className="px-4 py-2 text-sm font-medium bg-gray-800/60 hover:bg-blue-600/70 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-60 transition-all duration-200 ease-in-out transform hover:scale-105"
+            onClick={() => handleDesktopPlanetClick(planet)}
           >
             {planet.name}
           </button>
         ))}
       </nav>
 
-      {/* Mobile Navigation Bar (Title and Hamburger) */}
-      <div className="fixed top-0 left-0 w-full p-4 text-white z-20 md:hidden flex justify-between items-center bg-black/70 backdrop-blur-md">
+      {/* Mobile Top Bar (Title & Hamburger) */}
+      <div
+        className={`fixed top-0 left-0 w-full ${navBarHeight} bg-black/70 backdrop-blur-md text-white z-30 flex md:hidden justify-between items-center px-4 shadow-lg`}
+      >
         <span className="text-lg font-semibold tracking-wider">SPACE RESUME</span>
         <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="p-2 rounded-md bg-gray-700/80 hover:bg-blue-600/80 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+          onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+          className="p-2 rounded-md bg-gray-700/70 hover:bg-blue-600/80 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors z-40" // z-40 to be above mobile nav drawer
           aria-label="Toggle menu"
         >
           <AnimatePresence mode="wait">
             <motion.div
-              key={isMobileMenuOpen ? "close" : "open"}
-              initial={{ rotate: isMobileMenuOpen ? -90 : 90, opacity: 0 }}
+              key={isMobileNavOpen ? "close" : "open"}
+              initial={{ rotate: -90, opacity: 0 }}
               animate={{ rotate: 0, opacity: 1 }}
-              exit={{ rotate: isMobileMenuOpen ? 90 : -90, opacity: 0 }}
+              exit={{ rotate: 90, opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              {isMobileMenuOpen ? (
+              {isMobileNavOpen ? (
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -117,32 +110,32 @@ export default function HUDOverlay({ onNavigateToPlanet, onFocusCamera }: HUDOve
         </button>
       </div>
 
-      {/* Mobile Drawer Menu */}
+      {/* Mobile Left-Side Navigation Drawer */}
       <AnimatePresence>
-        {isMobileMenuOpen && (
+        {isMobileNavOpen && (
           <motion.div
-            variants={mobileMenuVariants}
+            variants={mobileNavVariants}
             initial="hidden"
             animate="visible"
             exit="exit"
-            transition={{ type: "spring", damping: 25, stiffness: 180 }}
-            className="fixed inset-0 bg-black/90 backdrop-blur-lg z-10 pt-20 p-6 md:hidden flex flex-col items-center space-y-3" // z-10 so it's under the top bar (z-20)
+            transition={{ type: "spring", damping: 25, stiffness: 150 }}
+            className={`fixed top-0 left-0 w-3/4 max-w-xs h-full bg-gray-900/90 backdrop-blur-lg shadow-2xl z-20 pt-${navBarHeight} p-6 flex flex-col space-y-3`} // z-20, below mobile top bar. pt for navbar height.
           >
+            <h2 className="text-xl font-semibold text-blue-300 mb-4 px-2">Navigation</h2>
             {navItems.map((planet, index) => (
               <motion.button
                 key={planet.name}
                 custom={index}
-                variants={mobileMenuItemVariants}
+                variants={mobileNavItemVariants}
                 initial="hidden"
                 animate="visible"
                 exit="exit"
-                className="w-full max-w-xs px-6 py-3.5 text-md font-medium bg-gray-800/80 rounded-lg hover:bg-blue-600/90 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-150"
-                onClick={() => handlePlanetClick(planet.name)}
+                className="w-full px-4 py-3 text-left text-md font-medium bg-gray-800/70 rounded-lg hover:bg-blue-600/80 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-150"
+                onClick={() => handleMobilePlanetClick(planet)}
               >
                 {planet.name}
               </motion.button>
             ))}
-             {/* Close button is now the X icon in the top bar for mobile */}
           </motion.div>
         )}
       </AnimatePresence>
