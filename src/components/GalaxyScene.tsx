@@ -94,7 +94,10 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
     description?: string,
     isMoon: boolean = false
   ) => {
-    if (planetMesh.current) {
+    // Only proceed if it's a moon that's being focused.
+    // Planets will not trigger this part due to onClick removal in Planet.tsx,
+    // but this check ensures that only moon interactions open the modal.
+    if (isMoon && planetMesh.current) {
       const { x, y, z } = planetMesh.current.position;
       setTarget({ position: [x, y, z], name, description });
 
@@ -102,40 +105,47 @@ export default function GalaxyScene({ selectedItem }: GalaxySceneProps) {
         isOpen: true,
         title: name,
         content: description || "",
-        type: isMoon ? "moon" : "planet",
+        type: "moon", // Type will always be 'moon' if we reach here
       });
     }
+    // If it's not a moon, we do nothing in handleFocus regarding modal or target.
+    // Camera focusing on planets by click is implicitly removed.
   };
 
   useEffect(() => {
     if (selectedItem) {
-      // Find the corresponding orbit data
-      const planet = orbits.find(
+      const planetData = orbits.find(
         (orbit) =>
           orbit.name === selectedItem.name ||
           orbit.moons?.some((moon) => moon.name === selectedItem.name)
       );
 
-      if (planet) {
-        if (selectedItem.type === "planet") {
-          handleFocus(
-            {
-              current: { position: new THREE.Vector3(planet.radius, 0, 0) },
-            } as any,
-            selectedItem.name
-          );
-        } else {
-          // Handle moon selection
-          const moon = planet.moons?.find((m) => m.name === selectedItem.name);
+      if (planetData) {
+        // For HUD navigation, if it's a planet, we might still want to focus the camera on it,
+        // but not open the modal. If it's a moon, we do both.
+        const targetMeshRef = { current: { position: new THREE.Vector3(planetData.radius, 0, 0) } } as any;
+
+        if (selectedItem.type === "moon") {
+          const moon = planetData.moons?.find((m) => m.name === selectedItem.name);
           if (moon) {
+            // Call handleFocus for moons, which will set target and open modal
             handleFocus(
-              {
-                current: { position: new THREE.Vector3(planet.radius, 0, 0) },
-              } as any,
+              targetMeshRef,
               moon.name,
               moon.description,
               true
             );
+          }
+        } else if (selectedItem.type === "planet") {
+          // For planets selected via HUD, only set the camera target. Do not open modal.
+          // We need to find the planet's mesh or its position.
+          // Since planets are identified by name and radius in orbits data:
+          if (targetMeshRef.current) {
+             const { x, y, z } = targetMeshRef.current.position; // This is orbit radius, not actual planet position if it moves
+             // For simplicity, we'll use the orbit's defining point as the target.
+             // A more accurate approach would be to find the actual planet mesh if planets move independently.
+             // Given current Planet.tsx, position is orbital.
+             setTarget({ position: [planetData.radius, 0, 0], name: selectedItem.name });
           }
         }
       }
