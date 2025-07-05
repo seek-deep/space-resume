@@ -1,6 +1,6 @@
 // GalaxyScene.jsx
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Stars } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 // InfoModal is no longer used here, App.tsx handles MoonDetailDrawer
 import { useState, useEffect, Suspense } from "react";
 import Planet from "./Planet";
@@ -8,7 +8,8 @@ import Orbit from "./Orbit";
 import AsteroidBelt from "./AsteroidBelt";
 import AssistantAvatar from "./AssistantAvatar";
 import * as THREE from "three";
-import { orbits, textures, OrbitData as PlanetOrbitData } from "../constants"; // Renamed OrbitData to avoid conflict
+import { orbits, textures, OrbitData as PlanetOrbitData } from "../constants";
+import { Stars } from "../components/Stars"; // relative path
 
 // Only keep the CameraController component and UI components, remove orbit data
 function CameraController({
