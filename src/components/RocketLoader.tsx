@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useGLTF, Stars } from "@react-three/drei";
+import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
+import { Stars } from "../components/Stars"; // relative path
 
 interface RocketLoaderProps {
   onFinish: () => void;
