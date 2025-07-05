@@ -1,8 +1,9 @@
 import { useState } from "react";
 import GalaxyScene from "./components/GalaxyScene";
 import HUDOverlay from "./components/HUDOverlay";
-import MoonDetailDrawer from "./components/MoonDetailDrawer"; // Import MoonDetailDrawer
-import { OrbitData, Moon } from "./constants"; // Import types
+import MoonDetailDrawer from "./components/MoonDetailDrawer";
+import RocketLoader from "./components/RocketLoader";
+import { OrbitData, Moon } from "./constants";
 import "./index.css";
 
 // For camera focus target in GalaxyScene
@@ -13,6 +14,7 @@ interface CameraFocusTarget {
 }
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
   const [isMoonDetailDrawerOpen, setIsMoonDetailDrawerOpen] = useState(false);
   const [selectedMoonData, setSelectedMoonData] = useState<Moon | null>(null);
   // Store the parent planet of the selected moon for context (e.g., camera positioning)
@@ -56,20 +58,25 @@ function App() {
   };
 
   return (
-    <div className="!w-screen !h-screen bg-black overflow-hidden m-0">
-      <HUDOverlay onMoonSelect={handleMoonSelection} />
-      <GalaxyScene
-        selectedItem={cameraFocusTarget}
-        onMoonSelect={handleMoonSelection}
-      />
-      <MoonDetailDrawer
-        isOpen={isMoonDetailDrawerOpen}
-        onClose={handleCloseMoonDetailDrawer}
-        moonData={selectedMoonData}
-        navBarHeightClass={navBarHeightClass}
-        // planetForContext={currentPlanetForMoon} // Could pass planet if drawer needs more than just moonData
-      />
-    </div>
+    <>
+      {isLoading ? (
+        <RocketLoader onFinish={() => setIsLoading(false)} />
+      ) : (
+        <div className="!w-screen !h-screen bg-black overflow-hidden m-0">
+          <HUDOverlay onMoonSelect={handleMoonSelection} />
+          <GalaxyScene
+            selectedItem={cameraFocusTarget}
+            onMoonSelect={handleMoonSelection}
+          />
+          <MoonDetailDrawer
+            isOpen={isMoonDetailDrawerOpen}
+            onClose={handleCloseMoonDetailDrawer}
+            moonData={selectedMoonData}
+            navBarHeightClass={navBarHeightClass}
+          />
+        </div>
+      )}
+    </>
   );
 }
 

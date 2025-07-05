@@ -35,6 +35,7 @@ export default function AssistantAvatar() {
   const [hasLoopedOnce, setHasLoopedOnce] = useState(false);
   const bobAnimation = useRef(0);
   const waveAnimation = useRef(0);
+  const [isMobile, setIsMobile] = useState(false);
 
   const gltf = useGLTF(
     "https://models.readyplayer.me/684d734f5ff6c5b89015b07a.glb"
@@ -61,6 +62,13 @@ export default function AssistantAvatar() {
         }
       });
     }
+    // Mobile detection
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+    };
   }, [gltf.scene]);
 
   useEffect(() => {
@@ -196,7 +204,7 @@ export default function AssistantAvatar() {
       <ambientLight intensity={0.5} />
       <primitive object={gltf.scene} />
       <Html
-        position={[-0.3, 2.35, 0]}
+        position={isMobile ? [-2.2, 2.35, 0] : [-0.3, 2.35, 0]}
         center
         style={{
           background: "rgba(0, 0, 0, 0.8)",
