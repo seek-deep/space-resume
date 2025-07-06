@@ -4,6 +4,8 @@ import HUDOverlay from "./components/HUDOverlay";
 import MoonDetailDrawer from "./components/MoonDetailDrawer";
 import RocketLoader from "./components/RocketLoader";
 import { OrbitData, Moon } from "./constants";
+import { useProgress } from "@react-three/drei";
+import { AnimatePresence, motion } from "framer-motion";
 import "./index.css";
 
 // For camera focus target in GalaxyScene
@@ -14,13 +16,9 @@ interface CameraFocusTarget {
 }
 
 function App() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isRocketAnimDone, setIsRocketAnimDone] = useState(false);
   const [isMoonDetailDrawerOpen, setIsMoonDetailDrawerOpen] = useState(false);
   const [selectedMoonData, setSelectedMoonData] = useState<Moon | null>(null);
-  // Store the parent planet of the selected moon for context (e.g., camera positioning)
-  const [currentPlanetForMoon, setCurrentPlanetForMoon] =
-    useState<OrbitData | null>(null);
-
   const [cameraFocusTarget, setCameraFocusTarget] =
     useState<CameraFocusTarget | null>(null);
 
@@ -36,7 +34,6 @@ function App() {
       planetData
     );
     setSelectedMoonData(moonData);
-    setCurrentPlanetForMoon(planetData); // Store parent planet context
     setIsMoonDetailDrawerOpen(true);
 
     // Set camera focus target to the selected moon
@@ -53,29 +50,68 @@ function App() {
     // Delay clearing data to allow for exit animations
     setTimeout(() => {
       setSelectedMoonData(null);
-      setCurrentPlanetForMoon(null);
     }, 300); // Match animation duration (approx)
   };
 
+  // Use useProgress to track GalaxyScene asset loading
+  const { progress } = useProgress();
+  const isGalaxyLoaded = progress === 100;
+  const isLoading = !(isRocketAnimDone && isGalaxyLoaded);
+
   return (
     <>
-      {isLoading ? (
-        <RocketLoader onFinish={() => setIsLoading(false)} />
-      ) : (
-        <div className="!w-screen !h-screen bg-black overflow-hidden m-0">
-          <HUDOverlay onMoonSelect={handleMoonSelection} />
-          <GalaxyScene
-            selectedItem={cameraFocusTarget}
-            onMoonSelect={handleMoonSelection}
-          />
-          <MoonDetailDrawer
-            isOpen={isMoonDetailDrawerOpen}
-            onClose={handleCloseMoonDetailDrawer}
-            moonData={selectedMoonData}
-            navBarHeightClass={navBarHeightClass}
-          />
-        </div>
-      )}
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+          <motion.div
+            key="loader"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 1.2 } }}
+            style={{
+              position: "absolute",
+              width: "100vw",
+              height: "100vh",
+              zIndex: 20,
+            }}
+          >
+            <RocketLoader
+              onFinish={() => setIsRocketAnimDone(true)}
+              loadingProgress={progress}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="galaxy"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: 1.2 } }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: "absolute",
+              width: "100vw",
+              height: "100vh",
+              zIndex: 10,
+            }}
+          >
+            <div className="!w-screen !h-screen bg-black overflow-hidden m-0">
+              <HUDOverlay onMoonSelect={handleMoonSelection} />
+              <GalaxyScene
+                selectedItem={cameraFocusTarget}
+                onMoonSelect={handleMoonSelection}
+              />
+              <MoonDetailDrawer
+                isOpen={isMoonDetailDrawerOpen}
+                onClose={handleCloseMoonDetailDrawer}
+                moonData={selectedMoonData}
+                navBarHeightClass={navBarHeightClass}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Hidden Canvas to trigger asset preloading for GalaxyScene */}
+      <div style={{ display: "none" }}>
+        <GalaxyScene selectedItem={null} />
+      </div>
     </>
   );
 }
