@@ -6,18 +6,23 @@ import { Stars } from "../components/Stars"; // relative path
 
 interface RocketLoaderProps {
   onFinish: () => void;
+  loadingProgress: number;
 }
 
-function RocketScene({ onFinish }: { onFinish: () => void }) {
+function RocketScene({
+  onFinish,
+  loadingProgress,
+}: {
+  onFinish: () => void;
+  loadingProgress: number;
+}) {
   const rocketRef = useRef<THREE.Group>(null);
   const blackholeRef = useRef<THREE.Group>(null);
   const { camera } = useThree();
-
   const [phase, setPhase] = useState<"entry" | "follow" | "warp" | "complete">(
     "entry"
   );
   const timeRef = useRef(0);
-  const followOffset = new THREE.Vector3(0, 2, 10);
 
   const { scene: rocketScene } = useGLTF("/glb/rocket_spaceship.glb");
   const { scene: blackholeScene } = useGLTF("/glb/blackhole.glb");
@@ -29,7 +34,7 @@ function RocketScene({ onFinish }: { onFinish: () => void }) {
     }
     if (blackholeRef.current) {
       blackholeRef.current.scale.set(1, 1, 1);
-      blackholeRef.current.position.set(0, 0, -200); // Initially far ahead
+      blackholeRef.current.position.set(0, 0, -200);
     }
     camera.position.set(0, 0, 30);
     camera.lookAt(0, 0, 0);
@@ -37,14 +42,28 @@ function RocketScene({ onFinish }: { onFinish: () => void }) {
 
   useFrame((_, delta) => {
     if (!rocketRef.current || !blackholeRef.current) return;
+
+    if (phase === "entry") {
+      // While loading, control rocket X position by loadingProgress
+      if (loadingProgress < 100) {
+        const x = THREE.MathUtils.lerp(-30, 5, loadingProgress / 100);
+        rocketRef.current.position.set(x, 0, 0);
+        camera.position.set(0, 0, 30);
+        camera.lookAt(0, 0, 0);
+        timeRef.current = 0;
+        return;
+      }
+    }
+
     timeRef.current += delta;
 
     switch (phase) {
       case "entry": {
-        const progress = Math.min(timeRef.current / 3, 1);
-        const x = THREE.MathUtils.lerp(-30, 5, progress - 0.1);
+        // Only start entry animation after loading is complete
+        const progressEntry = Math.min(timeRef.current / 3, 1);
+        const x = THREE.MathUtils.lerp(-30, 5, progressEntry - 0.1);
         rocketRef.current.position.set(x, 0, 0);
-        if (progress === 1) {
+        if (progressEntry === 1) {
           setPhase("follow");
           timeRef.current = 0;
         }
@@ -52,7 +71,7 @@ function RocketScene({ onFinish }: { onFinish: () => void }) {
       }
 
       case "follow": {
-        const progress = Math.min(timeRef.current / 1.5, 1);
+        const progressFollow = Math.min(timeRef.current / 1.5, 1);
         const orbitRadius = 12;
         const angle = -Math.PI / 2;
         const offsetX = Math.sin(angle) * orbitRadius;
@@ -65,7 +84,7 @@ function RocketScene({ onFinish }: { onFinish: () => void }) {
         camera.position.lerp(targetPos, 0.05);
         camera.lookAt(rocketRef.current.position);
 
-        if (progress === 1) {
+        if (progressFollow === 1) {
           setPhase("warp");
           timeRef.current = 0;
         }
@@ -73,13 +92,13 @@ function RocketScene({ onFinish }: { onFinish: () => void }) {
       }
 
       case "warp": {
-        const progress = Math.min(timeRef.current / 4, 1);
+        const progressWarp = Math.min(timeRef.current / 4, 1);
 
         // 🚀 Pull rocket deeper into space
-        rocketRef.current.position.z -= delta * (100 + progress * 400);
+        rocketRef.current.position.z -= delta * (100 + progressWarp * 400);
 
         // 📉 Scale rocket down to simulate distant pull
-        const rocketScale = THREE.MathUtils.lerp(3, 0.3, progress);
+        const rocketScale = THREE.MathUtils.lerp(3, 0.3, progressWarp);
         rocketRef.current.scale.set(rocketScale, rocketScale, rocketScale);
 
         // 🎥 Camera stays behind and above
@@ -102,7 +121,7 @@ function RocketScene({ onFinish }: { onFinish: () => void }) {
         blackholeRef.current.position.copy(blackholeTarget);
 
         // Smooth scale-in only in second half of warp
-        const reveal = Math.max(0, progress - 0.1);
+        const reveal = Math.max(0, progressWarp - 0.1);
         const blackholeScale = THREE.MathUtils.lerp(0.01, 30, reveal);
         blackholeRef.current.scale.set(
           blackholeScale,
@@ -121,7 +140,7 @@ function RocketScene({ onFinish }: { onFinish: () => void }) {
           }
         });
 
-        if (progress === 1) {
+        if (progressWarp === 1) {
           setPhase("complete");
           timeRef.current = 0;
           onFinish();
@@ -153,7 +172,10 @@ function RocketScene({ onFinish }: { onFinish: () => void }) {
   );
 }
 
-export default function RocketLoader({ onFinish }: RocketLoaderProps) {
+export default function RocketLoader({
+  onFinish,
+  loadingProgress,
+}: RocketLoaderProps) {
   const [opacity, setOpacity] = useState(1);
 
   useEffect(() => {
@@ -174,7 +196,7 @@ export default function RocketLoader({ onFinish }: RocketLoaderProps) {
       }}
     >
       <Canvas camera={{ fov: 75, position: [0, 0, 30] }}>
-        <RocketScene onFinish={onFinish} />
+        <RocketScene onFinish={onFinish} loadingProgress={loadingProgress} />
       </Canvas>
     </div>
   );
