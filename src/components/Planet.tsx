@@ -1,5 +1,5 @@
 import { Html } from "@react-three/drei";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { shaderMaterial } from "@react-three/drei";
@@ -78,61 +78,109 @@ function MoonObject({
   ) => void;
 }) {
   const mesh = useRef<THREE.Mesh>(null);
-  const angleRef = useRef((Math.PI * 2 * index) / totalMoons);
   const [hovered, setHovered] = useState(false);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const tooltipTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [active, setActive] = useState(false);
+  const angleRef = useRef((Math.PI * 2 * index) / totalMoons);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useFrame(() => {
     if (mesh.current && planetMesh.current) {
       angleRef.current += 0.005;
       const planetPosition = planetMesh.current.position;
-
       const x = planetPosition.x + orbitRadius * Math.cos(angleRef.current);
       const z = planetPosition.z + orbitRadius * Math.sin(angleRef.current);
       const y = planetPosition.y + Math.sin(angleRef.current * 2) * 0.3;
-
       mesh.current.position.set(x, y, z);
       mesh.current.rotation.y += 0.01;
     }
   });
 
+  // Tooltip logic
+  const showTooltip = () => {
+    setHovered(true);
+    setTooltipVisible(true);
+    if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
+  };
+  const hideTooltip = () => {
+    setHovered(false);
+    if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
+    tooltipTimeout.current = setTimeout(() => setTooltipVisible(false), 1000);
+  };
+
   return (
     <>
+      {/* Larger transparent hit area for easier clicking */}
+      <mesh
+        position={mesh.current?.position}
+        onPointerDown={() => {
+          setActive(true);
+          onFocus(mesh as MeshRef, moonData.name, moonData.description, true);
+          setTimeout(() => setActive(false), 120);
+        }}
+        onPointerOver={showTooltip}
+        onPointerOut={hideTooltip}
+        visible={false}
+      >
+        <sphereGeometry args={[0.7, 16, 16]} />
+        <meshBasicMaterial transparent opacity={0} />
+      </mesh>
       <mesh
         ref={mesh}
-        onClick={() =>
-          onFocus(mesh as MeshRef, moonData.name, moonData.description, true)
-        }
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
+        onPointerDown={() => {
+          setActive(true);
+          onFocus(mesh as MeshRef, moonData.name, moonData.description, true);
+          setTimeout(() => setActive(false), 120);
+        }}
+        onPointerOver={showTooltip}
+        onPointerOut={hideTooltip}
+        scale={active ? 1.2 : hovered ? 1.1 : 1}
       >
-        <sphereGeometry args={[0.3, 16, 16]} />
+        <sphereGeometry args={[0.5, 16, 16]} />
         <meshStandardMaterial
           map={texture}
           emissive="#ffffff"
-          emissiveIntensity={hovered ? 0.2 : 0}
+          emissiveIntensity={hovered ? 0.3 : 0}
         />
       </mesh>
-
-      {hovered && (
+      {tooltipVisible && (
         <Html
-          position={[
-            mesh.current?.position.x || 0,
-            (mesh.current?.position.y || 0) + 0.5,
-            mesh.current?.position.z || 0,
-          ]}
+          position={
+            isMobile
+              ? [
+                  (mesh.current?.position.x || 0) - 1.2, // left of moon
+                  (mesh.current?.position.y || 0) + 1.2, // above moon
+                  mesh.current?.position.z || 0,
+                ]
+              : [
+                  mesh.current?.position.x || 0,
+                  (mesh.current?.position.y || 0) + 0.5,
+                  mesh.current?.position.z || 0,
+                ]
+          }
           center
         >
           <div
             style={{
-              background: "rgba(0, 0, 0, 0.8)",
-              padding: "8px 12px",
-              borderRadius: "8px",
+              background: "rgba(0, 0, 0, 0.85)",
+              padding: isMobile ? "16px 20px" : "8px 12px",
+              borderRadius: "10px",
               color: "white",
-              fontSize: "14px",
+              fontSize: isMobile ? "18px" : "14px",
               pointerEvents: "none",
               whiteSpace: "nowrap",
-              backdropFilter: "blur(4px)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(6px)",
+              border: "1px solid rgba(255, 255, 255, 0.15)",
+              boxShadow: isMobile ? "0 4px 24px rgba(0,0,0,0.4)" : undefined,
+              zIndex: 1000,
             }}
           >
             {moonData.name}
@@ -170,8 +218,17 @@ export default function Planet({
   const mesh = useRef<THREE.Mesh>(null);
   const materialRef = useRef<any>(null);
   const [hovered, setHovered] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const tooltipTimeout = useRef<NodeJS.Timeout | null>(null);
   const angleRef = useRef(Math.random() * Math.PI * 2);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Base orbital period (adjusted for radius)
   const baseSpeed = 0.001 / Math.sqrt(orbitRadius);
@@ -201,14 +258,26 @@ export default function Planet({
     }
   });
 
+  // Tooltip logic for planet
+  const showTooltip = () => {
+    setHovered(true);
+    setTooltipVisible(true);
+    if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
+  };
+  const hideTooltip = () => {
+    setHovered(false);
+    if (tooltipTimeout.current) clearTimeout(tooltipTimeout.current);
+    tooltipTimeout.current = setTimeout(() => setTooltipVisible(false), 1000);
+  };
+
   return (
     <>
       <mesh
         ref={mesh}
         position={position}
         // onClick={() => onFocus(mesh as MeshRef, name)} // Removed onClick for planets
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
+        onPointerOver={showTooltip}
+        onPointerOut={hideTooltip}
       >
         <sphereGeometry args={[1, 32, 32]} />
         {/* @ts-expect-error */}
@@ -219,101 +288,53 @@ export default function Planet({
         />
       </mesh>
 
-      {hovered && (
+      {tooltipVisible && (
         <Html
-          position={[
-            mesh.current?.position.x || 0,
-            (mesh.current?.position.y || 0) + 1.5, // Positioned above the planet
-            mesh.current?.position.z || 0,
-          ]}
+          position={
+            isMobile
+              ? [
+                  (mesh.current?.position.x || 0) - 2.2, // left of planet
+                  (mesh.current?.position.y || 0) + 2.2, // above planet
+                  mesh.current?.position.z || 0,
+                ]
+              : [
+                  mesh.current?.position.x || 0,
+                  (mesh.current?.position.y || 0) + 1.5,
+                  mesh.current?.position.z || 0,
+                ]
+          }
           center
           style={{
-            width: "250px", // Give it a bit more width for the new text
+            width: isMobile ? "90vw" : "250px",
+            maxWidth: isMobile ? "90vw" : undefined,
+            left: isMobile ? "5vw" : undefined,
             textAlign: "center",
+            zIndex: 1000,
           }}
         >
           <div
             style={{
-              background: "rgba(0, 0, 0, 0.8)",
-              padding: "10px 15px", // Slightly more padding
-              borderRadius: "10px", // Slightly more rounded
+              background: "rgba(0, 0, 0, 0.85)",
+              padding: isMobile ? "18px 22px" : "10px 15px",
+              borderRadius: "12px",
               color: "white",
-              fontSize: "14px",
+              fontSize: isMobile ? "19px" : "14px",
               pointerEvents: "none",
-              // whiteSpace: "nowrap", // Remove nowrap to allow text to wrap
-              backdropFilter: "blur(5px)", // Slightly more blur
-              border: "1px solid rgba(255, 255, 255, 0.15)", // Slightly more visible border
+              backdropFilter: "blur(7px)",
+              border: "1px solid rgba(255, 255, 255, 0.18)",
+              boxShadow: isMobile ? "0 4px 32px rgba(0,0,0,0.5)" : undefined,
             }}
           >
-            <div style={{ fontWeight: "bold", marginBottom: "5px" }}>
+            <div style={{ fontWeight: "bold", marginBottom: "7px" }}>
               This is {name}
             </div>
-            <div style={{ fontSize: "13px" }}>
+            <div style={{ fontSize: isMobile ? "16px" : "13px" }}>
               🛰️ Click on one of this planet’s moons to explore individual
               experiences/projects.
             </div>
           </div>
         </Html>
       )}
-
-      {/* {hasMoons && (
-        <Html
-          position={[
-            mesh.current?.position.x || 0,
-            (mesh.current?.position.y || 0) + 2,
-            mesh.current?.position.z || 0,
-          ]}
-          center
-        >
-          <div
-            style={{
-              background: "rgba(0, 0, 0, 0.8)",
-              padding: "8px 12px",
-              borderRadius: "8px",
-              color: "white",
-              fontSize: "14px",
-              pointerEvents: "auto",
-              whiteSpace: "nowrap",
-              backdropFilter: "blur(4px)",
-              border: "1px solid rgba(255, 255, 255, 0.1)",
-            }}
-          >
-            <button
-              onClick={() => setShowDropdown(!showDropdown)}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: "white",
-                cursor: "pointer",
-              }}
-            >
-              {showDropdown ? "Hide Moons" : "Show Moons"}
-            </button>
-
-            {showDropdown && (
-              <ul style={{ marginTop: "8px", padding: "0", listStyle: "none" }}>
-                {moons.map((moon, index) => (
-                  <li key={index}>
-                    <button
-                      onClick={() =>
-                        onFocus(mesh as MeshRef, moon.name, moon.description, true)
-                      }
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "white",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {moon.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </Html>
-      )} */}
 
       {hasMoons &&
         moons.map((moon, i) => (
